@@ -5,7 +5,7 @@ globals [ max-sheep ]  ; don't let sheep population grow too large
 ; Sheep and wolves are both breeds of turtle.
 breed [ sheep a-sheep ]  ; sheep is its own plural, so we use "a-sheep" as the singular.
 breed [ wolves wolf ]
-breed [ farmer farmers]  ;; farmers hunt down wolves
+breed [ farmers farmer ]  ;; farmers hunt down wolves
 turtles-own [ energy ]       ; both wolves and sheep have energy
 patches-own [ countdown ]
 
@@ -47,15 +47,18 @@ to setup
     setxy random-xcor random-ycor
   ]
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; added farmers which kill wolves
   create-farmers initial-number-farmers  ;; create the farmers, then initialize their variables
   [
-    set shapre "person"
-    set color gray
+    set shape "person"
+    set color blue
     set size 2.5
+    set energy random (2 * farmer-gain-from-food)
     setxy random-xcor random-ycor
   ]
-  ;;
+  ;; end farmer initialization
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   display-labels
   reset-ticks
@@ -82,6 +85,21 @@ to go
     death ; wolves die if our of energy
     reproduce-wolves ; wolves reproduce at random rate governed by slider
   ]
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; code for farmer behavior
+  ask farmers [
+    move
+    set energy energy - 1 ;; farmers lose energy as they move
+    eat-wolf ;; farmers eat a wolf on their patch
+    if count wolves < 5 [           ;; if there are less than 5 wolves
+      farmer-eat-sheep            ;; farmers will resort to eating sheep instead to avoid starvation
+    ]
+    death ;; farmers die if out of energy
+    reproduce-farmers ;; TODO
+  ]
+  ;; end farmer behavior code
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   if model-version = "sheep-wolves-grass" [ ask patches [ grow-grass ] ]
   ; set grass count patches with [pcolor = green]
   tick
@@ -116,6 +134,17 @@ to reproduce-wolves  ; wolf procedure
   ]
 end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; farmer procedure
+to reproduce-farmers
+  if random-float 100 < farmer-reproduce [ ;; throw "dice" to see if you will reproduce
+    set energy (energy / 2)                ;; divide energy between parent and offspring
+    hatch 1 [ rt random-float 360 fd 1 ]   ;; hatch an offspring and move it forward 1 step
+  ]
+end
+;; end farmer procedure
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 to eat-sheep  ; wolf procedure
   let prey one-of sheep-here                    ; grab a random sheep
   if prey != nobody  [                          ; did we get one?  if so,
@@ -124,6 +153,28 @@ to eat-sheep  ; wolf procedure
   ]
 end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; farmer procedure to eat wolf
+to eat-wolf
+  let prey one-of wolves-here                   ;; grab a random wolf
+  if prey != nobody  [                          ;; if we get one, then
+    ask prey [ die ]                            ;; kill it and
+    set energy energy + farmer-gain-from-food   ;; gain energy from eating
+  ]
+end
+
+;; farmer procedure to eat sheep in worst case scenario
+to farmer-eat-sheep
+  let prey one-of sheep-here                    ;; grab a random sheep
+  if prey != nobody  [                          ;; if we get one, then
+    ask prey [ die ]                            ;; kill it and
+    set energy energy + farmer-gain-from-food   ;; gain energy from eating
+  ]
+end
+;; end farmer procedure
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; now applies to farmers as well
 to death  ; turtle procedure (i.e. both wolf nd sheep procedure)
   ; when energy dips below zero, die
   if energy < 0 [ die ]
@@ -151,6 +202,7 @@ to display-labels
   ask turtles [ set label "" ]
   if show-energy? [
     ask wolves [ set label round energy ]
+    ask farmers [ set label round energy ] ;; show energy label for farmers
     if model-version = "sheep-wolves-grass" [ ask sheep [ set label round energy ] ]
   ]
 end
@@ -225,7 +277,7 @@ sheep-reproduce
 sheep-reproduce
 1.0
 20.0
-4.0
+7.0
 1.0
 1
 %
@@ -327,8 +379,8 @@ NIL
 
 PLOT
 10
-360
-350
+410
+345
 530
 populations
 time
@@ -344,12 +396,13 @@ PENS
 "sheep" 1.0 0 -612749 true "" "plot count sheep"
 "wolves" 1.0 0 -16449023 true "" "plot count wolves"
 "grass / 4" 1.0 0 -10899396 true "" "if model-version = \"sheep-wolves-grass\" [ plot count grass / 4 ]"
+"farmers" 1.0 0 -13345367 true "" "plot count farmers"
 
 MONITOR
-41
-308
-111
-353
+10
+360
+80
+405
 sheep
 count sheep
 3
@@ -357,10 +410,10 @@ count sheep
 11
 
 MONITOR
-115
-308
-185
-353
+85
+360
+155
+405
 wolves
 count wolves
 3
@@ -368,10 +421,10 @@ count wolves
 11
 
 MONITOR
-191
-308
-256
-353
+235
+360
+305
+405
 grass
 count grass / 4
 0
@@ -399,10 +452,10 @@ Wolf settings
 0
 
 SWITCH
-105
-270
-241
-303
+205
+320
+341
+353
 show-energy?
 show-energy?
 1
@@ -417,7 +470,7 @@ CHOOSER
 model-version
 model-version
 "sheep-wolves" "sheep-wolves-grass"
-0
+1
 
 SLIDER
 5
@@ -428,10 +481,61 @@ initial-number-farmers
 initial-number-farmers
 0
 5
-1.0
+2.0
 1
 1
 NIL
+HORIZONTAL
+
+MONITOR
+160
+360
+230
+405
+farmers
+count farmers
+0
+1
+11
+
+TEXTBOX
+20
+270
+170
+288
+Farmer settings
+11
+0.0
+1
+
+SLIDER
+5
+285
+180
+318
+farmer-gain-from-food
+farmer-gain-from-food
+0
+100
+100.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+5
+320
+180
+353
+farmer-reproduce
+farmer-reproduce
+0
+5
+3.0
+1
+1
+%
 HORIZONTAL
 
 @#$#@#$#@
