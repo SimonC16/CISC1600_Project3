@@ -119,6 +119,7 @@ to go
     set energy energy - 1 ;; bears lose energy as they move
     eat-farmer ;; bears eat a farmer on their patch
     if count farmers < 3 [           ;; if there are less than 5 farmers
+      bear-eat-wolf
       bear-eat-sheep            ;; bears will resort to eating sheep instead to avoid starvation
     ]
     death ;; bears die if out of energy
@@ -221,6 +222,13 @@ end
 ;; bear procedure to eat sheep in worst case scenario
 to bear-eat-sheep
   let prey one-of sheep-here                    ;; grab a random sheep
+  if prey != nobody  [                          ;; if we get one, then
+    ask prey [ die ]                            ;; kill it and
+    set energy energy + bear-gain-from-food   ;; gain energy from eating
+  ]
+end
+to bear-eat-wolf
+  let prey one-of wolves-here                   ;; grab a random wolf
   if prey != nobody  [                          ;; if we get one, then
     ask prey [ die ]                            ;; kill it and
     set energy energy + bear-gain-from-food   ;; gain energy from eating
