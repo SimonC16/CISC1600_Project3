@@ -6,6 +6,7 @@ globals [ max-sheep ]  ; don't let sheep population grow too large
 breed [ sheep a-sheep ]  ; sheep is its own plural, so we use "a-sheep" as the singular.
 breed [ wolves wolf ]
 breed [ farmers farmer ]  ;; farmers hunt down wolves
+breed [ bears bear] ;; bears kill farmers
 turtles-own [ energy ]       ; both wolves and sheep have energy
 patches-own [ countdown ]
 
@@ -60,6 +61,19 @@ to setup
   ;; end farmer initialization
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; added bears which kill farmers
+  create-bears initial-number-bears  ;; create the bears, then initialize their variables
+  [
+    set shape "bear"
+    set color brown
+    set size 5
+    set energy random (2 * bear-gain-from-food)
+    setxy random-xcor random-ycor
+  ]
+  ;; end bear initialization
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   display-labels
   reset-ticks
 end
@@ -98,6 +112,19 @@ to go
     reproduce-farmers ;; TODO
   ]
   ;; end farmer behavior code
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; code for bear behavior
+  ask bears [
+    move
+    set energy energy - 1 ;; bears lose energy as they move
+    eat-farmer ;; bears eat a farmer on their patch
+    if count farmers < 3 [           ;; if there are less than 5 farmers
+      bear-eat-sheep            ;; bears will resort to eating sheep instead to avoid starvation
+    ]
+    death ;; bears die if out of energy
+    reproduce-bears ;; TODO
+  ]
+  ;; end bear behavior code
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   if model-version = "sheep-wolves-grass" [ ask patches [ grow-grass ] ]
@@ -144,6 +171,15 @@ to reproduce-farmers
 end
 ;; end farmer procedure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; bear procedure
+to reproduce-bears
+  if random-float 100 < bear-reproduce [ ;; throw "dice" to see if you will reproduce
+    set energy (energy / 2)                ;; divide energy between parent and offspring
+    hatch 1 [ rt random-float 360 fd 1 ]   ;; hatch an offspring and move it forward 1 step
+  ]
+end
+;; end bear procedure
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to eat-sheep  ; wolf procedure
   let prey one-of sheep-here                    ; grab a random sheep
@@ -173,8 +209,27 @@ to farmer-eat-sheep
 end
 ;; end farmer procedure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; bear procedure to eat farmer
+to eat-farmer
+  let prey one-of farmers-here                   ;; grab a random wolf
+  if prey != nobody  [                          ;; if we get one, then
+    ask prey [ die ]                            ;; kill it and
+    set energy energy + bear-gain-from-food   ;; gain energy from eating
+  ]
+end
 
-;; now applies to farmers as well
+;; bear procedure to eat sheep in worst case scenario
+to bear-eat-sheep
+  let prey one-of sheep-here                    ;; grab a random sheep
+  if prey != nobody  [                          ;; if we get one, then
+    ask prey [ die ]                            ;; kill it and
+    set energy energy + bear-gain-from-food   ;; gain energy from eating
+  ]
+end
+;; end bear procedure
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; now applies to farmers and bears as well
 to death  ; turtle procedure (i.e. both wolf nd sheep procedure)
   ; when energy dips below zero, die
   if energy < 0 [ die ]
@@ -203,6 +258,7 @@ to display-labels
   if show-energy? [
     ask wolves [ set label round energy ]
     ask farmers [ set label round energy ] ;; show energy label for farmers
+    ask bears [set label round energy ] ;; show energy label for bears
     if model-version = "sheep-wolves-grass" [ ask sheep [ set label round energy ] ]
   ]
 end
@@ -240,44 +296,44 @@ ticks
 
 SLIDER
 5
-60
+10
 179
-93
+43
 initial-number-sheep
 initial-number-sheep
 0
 250
-100.0
+16.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-5
-196
-179
-229
+0
+130
+174
+163
 sheep-gain-from-food
 sheep-gain-from-food
 0.0
 50.0
-4.0
+0.0
 1.0
 1
 NIL
 HORIZONTAL
 
 SLIDER
-5
-231
-179
-264
+0
+165
+174
+198
 sheep-reproduce
 sheep-reproduce
 1.0
 20.0
-7.0
+1.0
 1.0
 1
 %
@@ -285,69 +341,69 @@ HORIZONTAL
 
 SLIDER
 185
-60
+10
 350
-93
+43
 initial-number-wolves
 initial-number-wolves
 0
 250
-50.0
+0.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-183
-195
-348
-228
+178
+129
+343
+162
 wolf-gain-from-food
 wolf-gain-from-food
 0.0
 100.0
-20.0
+1.0
 1.0
 1
 NIL
 HORIZONTAL
 
 SLIDER
-183
-231
-348
-264
+178
+165
+343
+198
 wolf-reproduce
 wolf-reproduce
 0.0
 20.0
-5.0
+0.0
 1.0
 1
 %
 HORIZONTAL
 
 SLIDER
-165
-100
-350
-133
+895
+60
+1080
+93
 grass-regrowth-time
 grass-regrowth-time
 0
 100
-32.0
+0.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-40
-140
-109
-173
+1095
+60
+1164
+93
 setup
 setup
 NIL
@@ -361,10 +417,10 @@ NIL
 1
 
 BUTTON
-115
-140
-190
-173
+1180
+60
+1255
+93
 go
 go
 T
@@ -378,10 +434,10 @@ NIL
 0
 
 PLOT
-10
-410
+910
+225
+1245
 345
-530
 populations
 time
 pop.
@@ -399,10 +455,10 @@ PENS
 "farmers" 1.0 0 -13345367 true "" "plot count farmers"
 
 MONITOR
-10
-360
-80
-405
+895
+135
+965
+180
 sheep
 count sheep
 3
@@ -410,10 +466,10 @@ count sheep
 11
 
 MONITOR
-85
-360
-155
-405
+970
+135
+1040
+180
 wolves
 count wolves
 3
@@ -421,10 +477,10 @@ count wolves
 11
 
 MONITOR
-235
-360
-305
-405
+1185
+135
+1255
+180
 grass
 count grass / 4
 0
@@ -432,40 +488,40 @@ count grass / 4
 11
 
 TEXTBOX
-20
-178
-160
-196
+15
+112
+155
+130
 Sheep settings
 11
 0.0
 0
 
 TEXTBOX
-198
-176
-311
-194
+193
+110
+306
+128
 Wolf settings
 11
 0.0
 0
 
 SWITCH
-205
-320
-341
-353
+100
+305
+236
+338
 show-energy?
 show-energy?
-1
+0
 1
 -1000
 
 CHOOSER
-5
+895
 10
-350
+1240
 55
 model-version
 model-version
@@ -473,25 +529,25 @@ model-version
 1
 
 SLIDER
-5
-100
-160
-133
+185
+55
+340
+88
 initial-number-farmers
 initial-number-farmers
 0
 5
-2.0
+5.0
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-160
-360
-230
-405
+1045
+135
+1115
+180
 farmers
 count farmers
 0
@@ -499,20 +555,20 @@ count farmers
 11
 
 TEXTBOX
-20
-270
-170
-288
+15
+204
+165
+222
 Farmer settings
 11
 0.0
 1
 
 SLIDER
-5
-285
-180
-318
+0
+219
+175
+252
 farmer-gain-from-food
 farmer-gain-from-food
 0
@@ -524,18 +580,84 @@ NIL
 HORIZONTAL
 
 SLIDER
-5
-320
-180
-353
+0
+254
+175
+287
 farmer-reproduce
 farmer-reproduce
 0
 5
-3.0
+5.0
 1
 1
 %
+HORIZONTAL
+
+SLIDER
+5
+55
+177
+88
+initial-number-bears
+initial-number-bears
+0
+10
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+190
+205
+340
+223
+Bear settings
+11
+0.0
+1
+
+MONITOR
+1120
+135
+1177
+180
+bears
+count bears
+0
+1
+11
+
+SLIDER
+180
+220
+352
+253
+bear-gain-from-food
+bear-gain-from-food
+0
+100
+100.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+180
+255
+352
+288
+bear-reproduce
+bear-reproduce
+0
+10
+10.0
+1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
@@ -675,6 +797,20 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+bear
+false
+0
+Circle -6459832 true false 110 5 80
+Polygon -6459832 true false 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -6459832 true false 127 79 172 94
+Polygon -6459832 true false 195 90 240 150 225 180 165 105
+Polygon -6459832 true false 105 90 60 150 75 180 135 105
+Polygon -6459832 true false 60 150 45 165 60 165 45 180 60 180 60 195 75 180
+Polygon -16777216 true false 240 150 255 165 240 165 255 180 240 180 240 195 225 180
+Polygon -16777216 true false 60 150 45 165 60 165 45 180 60 180 60 195 75 180
+Circle -6459832 true false 165 0 30
+Circle -6459832 true false 105 0 30
 
 box
 false
