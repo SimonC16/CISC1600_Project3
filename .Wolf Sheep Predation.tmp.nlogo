@@ -19,10 +19,10 @@ to setup
   ; otherwise the grass's state of growth and growing logic need to be set up
   ifelse model-version = "sheep-wolves-grass" [
     ask patches [
-      set pcolor one-of [ green gray ]
+      set pcolor one-of [ green  ]
       ifelse pcolor = green
         [ set countdown grass-regrowth-time ]
-      [ set countdown random grass-regrowth-time ] ; initialize grass regrowth clocks randomly for gray patches
+      [ set countdown random grass-regrowth-time ] ; initialize grass regrowth clocks randomly for brown patches
     ]
   ]
   [
@@ -66,7 +66,7 @@ to setup
   create-bears initial-number-bears  ;; create the bears, then initialize their variables
   [
     set shape "bear"
-    set color gray
+    set color brown
     set size 5
     set energy random (2 * bear-gain-from-food)
     setxy random-xcor random-ycor
@@ -143,9 +143,9 @@ to move  ; turtle procedure
 end
 
 to eat-grass  ; sheep procedure
-  ; sheep eat grass, turn the patch gray
+  ; sheep eat grass, turn the patch brown
   if pcolor = green [
-    set pcolor gray
+    set pcolor brown
     set energy energy + sheep-gain-from-food  ; sheep gain energy by eating
   ]
 end
@@ -246,8 +246,8 @@ to death  ; turtle procedure (i.e. both wolf nd sheep procedure)
 end
 
 to grow-grass  ; patch procedure
-  ; countdown on gray patches: if reach 0, grow some grass
-  if pcolor = gray [
+  ; countdown on brown patches: if reach 0, grow some grass
+  if pcolor = brown [
     ifelse countdown <= 0
       [ set pcolor green
         set countdown grass-regrowth-time ]
